@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#000000" />
+<title>Qraft — Professional QR Code Generator</title>
+<link rel="manifest" href="/manifest.json" />
+<link rel="icon" type="image/svg+xml" href="/icon.svg" />
+<link rel="apple-touch-icon" href="/icon.svg" />
+
+<script src="https://cdn.jsdelivr.net/npm/qr-code-styling@1.9.2/lib/qr-code-styling.js"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+
+<style>
+:root, [data-theme="light"] {
+  --bg: #f5f5f7; --card: #ffffff; --text: #1d1d1f; --text-secondary: #6e6e73;
+  --border: #d2d2d7; --accent: #000000; --accent-text: #ffffff;
+  --danger: #dc2626; --success: #16a34a; --warn: #f59e0b;
+  --radius: 14px; --radius-sm: 10px;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+[data-theme="dark"] {
+  --bg: #0a0a0a; --card: #1a1a1a; --text: #f5f5f7; --text-secondary: #a0a0a7;
+  --border: #333; --accent: #ffffff; --accent-text: #000000;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; }
+body {
+  font-family: var(--font); background: var(--bg); color: var(--text);
+  min-height: 100dvh; display: flex; flex-direction: column;
+  padding-bottom: calc(72px + env(safe-area-inset-bottom));
+  transition: background .2s, color .2s;
+}
+input, textarea, select, button { font-family: inherit; font-size: 16px; }
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px calc(14px + env(safe-area-inset-top));
+  background: var(--card); border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 50;
+}
+.topbar h1 { font-size: 18px; font-weight: 700; letter-spacing: -.3px; display: flex; align-items: center; gap: 8px; }
+.icon-btn {
+  width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--border);
+  background: var(--bg); color: var(--text); display: grid; place-items: center;
+  font-size: 18px; cursor: pointer;
+}
+main { flex: 1; padding: 16px; max-width: 640px; width: 100%; margin: 0 auto; }
+.view { display: none; animation: fadeIn .25s ease; }
+.view.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.card {
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 16px; margin-bottom: 14px;
+}
+.card-title { font-size: 13px; font-weight: 700; color: var(--text-secondary);
+  text-transform: uppercase; letter-spacing: .5px; margin-bottom: 12px; }
+.type-pills { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin: 0 -4px 14px; -webkit-overflow-scrolling: touch; }
+.type-pills::-webkit-scrollbar { display: none; }
+.type-pills button {
+  flex: 0 0 auto; padding: 8px 14px; border-radius: 999px; border: 1.5px solid var(--border);
+  background: var(--card); color: var(--text); font-size: 13px; font-weight: 500;
+  cursor: pointer; transition: all .15s; white-space: nowrap;
+}
+.type-pills button.active { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+.field { margin-bottom: 12px; }
+.field:last-child { margin-bottom: 0; }
+.field label { display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; }
+.field input[type=text], .field input[type=url], .field input[type=tel], .field input[type=email], .field input[type=password], .field input[type=datetime-local], .field input[type=number], .field textarea, .field select {
+  width: 100%; padding: 11px 12px; border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm); background: var(--bg); color: var(--text);
+  outline: none; transition: border-color .15s;
+}
+.field input:focus, .field textarea:focus, .field select:focus { border-color: var(--accent); }
+.field textarea { resize: vertical; min-height: 70px; }
+.field-row { display: flex; gap: 10px; }
+.field-row > .field { flex: 1; }
+.color-row { display: flex; gap: 12px; }
+.color-group { flex: 1; }
+.color-group span { display: block; font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; }
+input[type=color] { width: 100%; height: 40px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: 2px; background: var(--bg); cursor: pointer; }
+.range-row { display: flex; align-items: center; gap: 12px; }
+.range-row input[type=range] { flex: 1; -webkit-appearance: none; height: 6px; border-radius: 3px; background: var(--border); outline: none; }
+.range-row input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%; background: var(--accent); border: 2px solid var(--card); cursor: pointer; }
+.range-value { font-size: 13px; font-weight: 600; min-width: 60px; text-align: right; color: var(--text-secondary); }
+.logo-row { display: flex; align-items: center; gap: 10px; }
+.logo-row input[type=file] { display: none; }
+.logo-btn { flex: 1; padding: 10px 14px; border: 1.5px dashed var(--border); border-radius: var(--radius-sm); background: var(--bg); font-size: 13px; color: var(--text-secondary); text-align: center; cursor: pointer; transition: border-color .15s; }
+.logo-btn:hover { border-color: var(--accent); }
+.logo-preview { width: 40px; height: 40px; border-radius: 8px; object-fit: contain; border: 1.5px solid var(--border); background: var(--card); display: none; }
+.logo-preview.visible { display: block; }
+.icon-remove { width: 32px; height: 32px; border-radius: 50%; border: none; background: var(--bg); color: var(--text-secondary); cursor: pointer; display: none; font-size: 16px; }
+.icon-remove.visible { display: block; }
+.social-logos { display: grid; grid-template-columns: repeat(auto-fill, minmax(42px, 1fr)); gap: 8px; }
+.social-logo-btn { aspect-ratio: 1; border-radius: 10px; border: 2px solid var(--border); background: var(--card); color: var(--text); cursor: pointer; padding: 6px; display: flex; align-items: center; justify-content: center; transition: all .15s; }
+.social-logo-btn:hover { border-color: var(--accent); transform: translateY(-2px); }
+.social-logo-btn.active { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,0,0,0.08); transform: translateY(-2px); }
+.social-logo-btn svg { width: 100%; height: 100%; display: block; }
+[data-theme="dark"] .social-logo-btn.active { box-shadow: 0 0 0 3px rgba(255,255,255,0.15); }
+.presets { display: flex; gap: 8px; flex-wrap: wrap; }
+.preset-btn { width: 44px; height: 44px; border-radius: 12px; border: 2px solid var(--border); cursor: pointer; transition: transform .1s; }
+.preset-btn:active { transform: scale(.92); }
+.collapse-header { display: flex; justify-content: space-between; align-items: center; width: 100%; background: none; border: none; padding: 0; font-size: 14px; font-weight: 600; color: var(--text); cursor: pointer; }
+.collapse-header .chevron { transition: transform .2s; font-size: 12px; }
+.collapse-header.open .chevron { transform: rotate(180deg); }
+.collapse-body { max-height: 0; overflow: hidden; transition: max-height .3s ease; }
+.collapse-body.open { max-height: 2500px; padding-top: 14px; }
+.qr-wrapper { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; min-height: 260px; display: flex; justify-content: center; align-items: center; margin-bottom: 14px; position: relative; }
+#qr-canvas { display: none; max-width: 100%; }
+#qr-canvas canvas, #qr-canvas svg { display: block; max-width: 100%; height: auto; border-radius: 6px; }
+.empty-state { text-align: center; color: var(--text-secondary); padding: 40px 20px; }
+.empty-state .icon { font-size: 42px; opacity: .4; margin-bottom: 10px; }
+.empty-state p { font-size: 14px; }
+.warn-banner { display: none; padding: 10px 14px; background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 12px; }
+.warn-banner.visible { display: block; }
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn { flex: 1; min-width: 90px; padding: 12px 14px; border-radius: var(--radius-sm); border: none; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity .15s, transform .1s; }
+.btn:active:not(:disabled) { transform: scale(.97); }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+.btn-primary { background: var(--accent); color: var(--accent-text); }
+.btn-secondary { background: var(--card); color: var(--text); border: 1.5px solid var(--border); }
+.btn-full { width: 100%; }
+.btn-save { background: var(--card); color: var(--text); border: 1.5px solid var(--border); padding: 12px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 600; cursor: pointer; width: 100%; margin-bottom: 14px; }
+.bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card); border-top: 1px solid var(--border); display: flex; padding-bottom: env(safe-area-inset-bottom); z-index: 50; }
+.bottom-nav button { flex: 1; border: none; background: none; color: var(--text-secondary); padding: 10px 4px; cursor: pointer; font-size: 11px; font-weight: 500; display: flex; flex-direction: column; align-items: center; gap: 2px; transition: color .15s; }
+.bottom-nav button .tab-icon { font-size: 20px; }
+.bottom-nav button.active { color: var(--text); }
+#scanner-region { width: 100%; border-radius: var(--radius); overflow: hidden; background: #000; aspect-ratio: 1; max-height: 400px; }
+.scanner-actions { display: flex; gap: 10px; margin-top: 12px; }
+.scan-result { padding: 12px; background: var(--bg); border-radius: var(--radius-sm); font-size: 14px; word-break: break-all; margin-top: 12px; display: none; }
+.scan-result.visible { display: block; }
+.scan-result a { color: #2563eb; text-decoration: underline; }
+.history-list { display: flex; flex-direction: column; gap: 10px; }
+.history-item { display: flex; align-items: center; gap: 12px; padding: 10px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.history-thumb { width: 56px; height: 56px; border-radius: 8px; background: #fff; display: grid; place-items: center; flex-shrink: 0; border: 1px solid var(--border); overflow: hidden; padding: 4px; }
+.history-thumb > * { max-width: 100% !important; max-height: 100% !important; width: auto !important; height: auto !important; display: block; }
+.history-info { flex: 1; min-width: 0; }
+.history-info .type { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; font-weight: 600; }
+.history-info .data { font-size: 13px; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
+.history-actions { display: flex; gap: 4px; }
+.history-actions button { background: none; border: none; cursor: pointer; padding: 6px; font-size: 16px; border-radius: 6px; color: var(--text-secondary); }
+.history-actions button:hover { background: var(--bg); }
+.empty-history { text-align: center; color: var(--text-secondary); padding: 40px 20px; }
+.bulk-hint { font-size: 12px; color: var(--text-secondary); margin-bottom: 10px; }
+.bulk-hint code { background: var(--bg); padding: 2px 6px; border-radius: 4px; font-size: 11px; }
+.bulk-progress { height: 6px; background: var(--border); border-radius: 3px; margin-top: 12px; overflow: hidden; display: none; }
+.bulk-progress.visible { display: block; }
+.bulk-progress-bar { height: 100%; background: var(--accent); width: 0; transition: width .2s; }
+.toast { position: fixed; bottom: calc(90px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%) translateY(20px); background: var(--accent); color: var(--accent-text); padding: 12px 20px; border-radius: 12px; font-size: 14px; font-weight: 500; opacity: 0; transition: all .25s; pointer-events: none; z-index: 999; max-width: 90%; text-align: center; }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.qr-wrapper.frame { border: 4px solid var(--text); border-radius: 16px; padding: 20px 20px 44px; position: relative; }
+.qr-wrapper.frame::after { content: "SCAN ME"; position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); font-size: 13px; font-weight: 800; letter-spacing: 2px; color: var(--text); }
+.analytics-hero { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+.analytics-stat { padding: 16px; background: var(--bg); border-radius: var(--radius-sm); text-align: center; }
+.analytics-stat .num { font-size: 32px; font-weight: 800; letter-spacing: -1px; line-height: 1; }
+.analytics-stat .lbl { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .5px; margin-top: 6px; }
+.analytics-link-item { display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--bg); border-radius: var(--radius-sm); margin-bottom: 8px; }
+.analytics-link-item .info { flex: 1; min-width: 0; }
+.analytics-link-item .code { font-family: monospace; font-size: 11px; color: var(--text-secondary); font-weight: 600; }
+.analytics-link-item .url { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px; }
+.analytics-link-item .count { text-align: right; flex-shrink: 0; }
+.analytics-link-item .count .n { font-size: 20px; font-weight: 800; line-height: 1; }
+.analytics-link-item .count .u { font-size: 10px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .5px; margin-top: 2px; }
+.track-btn { margin-top: 4px; padding: 10px 16px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--bg); color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer; width: 100%; }
+.track-btn:hover { border-color: var(--accent); }
+.track-btn.active { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+.track-btn:disabled { cursor: default; }
+.slug-hint { font-size: 11px; color: var(--text-secondary); margin-top: 4px; word-break: break-all; }
+.slug-hint.error { color: var(--danger); }
+.slug-hint code { font-family: monospace; background: var(--bg); padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <h1>
+    <svg width="28" height="28" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="2"/>
+      <rect x="18" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="2"/>
+      <rect x="2" y="18" width="12" height="12" rx="2" stroke="currentColor" stroke-width="2"/>
+      <path d="M18 18h4v4h-4zM24 24h4v4h-4zM24 18h4v4h-4zM18 24h4v4h-4z" fill="currentColor"/>
+    </svg>
+    Qraft
+  </h1>
+  <button class="icon-btn" id="theme-toggle" title="Toggle theme">🌙</button>
+</header>
+
+<main>
+  <section class="view active" id="view-generate">
+    <div class="card">
+      <div class="type-pills" id="type-pills">
+        <button data-type="text" class="active">📝 Text</button>
+        <button data-type="url">🔗 URL</button>
+        <button data-type="wifi">📶 WiFi</button>
+        <button data-type="vcard">👤 vCard</button>
+        <button data-type="email">✉️ Email</button>
+        <button data-type="sms">💬 SMS</button>
+        <button data-type="whatsapp">📱 WhatsApp</button>
+        <button data-type="phone">📞 Phone</button>
+        <button data-type="location">📍 Location</button>
+        <button data-type="event">📅 Event</button>
+      </div>
+      <div id="form-area"></div>
+    </div>
+
+    <div class="card">
+      <button class="collapse-header" data-target="design-body" id="design-toggle">
+        <span>🎨 Design & Style</span>
+        <span class="chevron">▼</span>
+      </button>
+      <div class="collapse-body" id="design-body">
+        <div class="field">
+          <label>Quick Presets</label>
+          <div class="presets" id="presets"></div>
+        </div>
+        <div class="field">
+          <label>Colors</label>
+          <div class="color-row">
+            <div class="color-group"><span>Foreground</span><input type="color" id="fg-color" value="#000000" /></div>
+            <div class="color-group"><span>Background</span><input type="color" id="bg-color" value="#ffffff" /></div>
+          </div>
+        </div>
+        <div class="field">
+          <label><input type="checkbox" id="gradient-toggle" style="width:auto;margin-right:6px">Enable Gradient (Foreground)</label>
+          <div class="color-row" id="gradient-colors" style="display:none;margin-top:8px">
+            <div class="color-group"><span>Gradient From</span><input type="color" id="fg-grad-start" value="#0077b6" /></div>
+            <div class="color-group"><span>Gradient To</span><input type="color" id="fg-grad-end" value="#00b4d8" /></div>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Dot Style</label>
+            <select id="dot-style">
+              <option value="square">Square</option><option value="rounded" selected>Rounded</option><option value="dots">Dots</option><option value="classy">Classy</option><option value="classy-rounded">Classy Rounded</option><option value="extra-rounded">Extra Rounded</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Corner Style</label>
+            <select id="corner-style">
+              <option value="square">Square</option><option value="extra-rounded" selected>Extra Rounded</option><option value="dot">Dot</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label>Size (px)</label>
+          <div class="range-row">
+            <input type="range" id="size-slider" min="128" max="1024" value="400" step="8" />
+            <span class="range-value" id="size-value">400px</span>
+          </div>
+        </div>
+        <div class="field">
+          <label>Social Media Logo</label>
+          <div class="social-logos" id="social-logos"></div>
+        </div>
+        <div class="field">
+          <label>Custom Logo (Optional)</label>
+          <div class="logo-row">
+            <label class="logo-btn" for="logo-input">📷 Upload</label>
+            <input type="file" id="logo-input" accept="image/*" />
+            <img class="logo-preview" id="logo-preview" alt="" />
+            <button class="icon-remove" id="remove-logo" title="Remove">✕</button>
+          </div>
+        </div>
+        <div class="field">
+          <label style="display:flex;align-items:center;gap:8px">
+            <input type="checkbox" id="frame-toggle" style="width:auto"> Add "SCAN ME" frame
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="warn-banner" id="contrast-warn">⚠️ Low contrast — may cause scanning issues</div>
+
+    <div class="qr-wrapper" id="qr-wrapper">
+      <div class="empty-state" id="empty-state">
+        <div class="icon">◻️</div>
+        <p>Enter data above to generate a QR</p>
+      </div>
+      <div id="qr-canvas"></div>
+    </div>
+
+    <div class="btn-row" style="margin-bottom:10px">
+      <button class="btn btn-primary" id="dl-png" disabled>⬇ PNG</button>
+      <button class="btn btn-secondary" id="dl-svg" disabled>⬇ SVG</button>
+      <button class="btn btn-secondary" id="dl-pdf" disabled>⬇ PDF</button>
+    </div>
+    <div class="btn-row" style="margin-bottom:14px">
+      <button class="btn btn-secondary" id="copy-btn" disabled>📋 Copy</button>
+      <button class="btn btn-secondary" id="share-btn" disabled>↗ Share</button>
+    </div>
+    <button class="btn-save" id="save-history" disabled>💾 Save to History</button>
+  </section>
+
+  <section class="view" id="view-scan">
+    <div class="card">
+      <div class="card-title">Scan QR Code</div>
+      <div id="scanner-region"></div>
+      <div class="scanner-actions">
+        <button class="btn btn-primary" id="scan-start">📷 Start Camera</button>
+        <button class="btn btn-secondary" id="scan-stop" disabled>⏹ Stop</button>
+      </div>
+      <div class="scan-result" id="scan-result"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">💡 Tips</div>
+      <p style="font-size:13px;line-height:1.6;color:var(--text-secondary)">Point the QR code at the camera. Once scanned, the result appears above and you can create a new QR from it.</p>
+    </div>
+  </section>
+
+  <section class="view" id="view-history">
+    <div class="card">
+      <div class="card-title">Saved QRs</div>
+      <div class="history-list" id="history-list"></div>
+      <div class="empty-history" id="empty-history" style="display:none">
+        <div style="font-size:32px;opacity:.4;margin-bottom:8px">🕐</div>
+        <p>No saved QRs yet</p>
+      </div>
+    </div>
+    <button class="btn btn-secondary btn-full" id="clear-history">🗑 Clear All</button>
+  </section>
+
+  <section class="view" id="view-analytics">
+    <div class="card">
+      <div class="card-title">📊 Analytics</div>
+      <div class="analytics-hero">
+        <div class="analytics-stat">
+          <div class="num" id="gen-count">—</div>
+          <div class="lbl">QRs Generated</div>
+        </div>
+        <div class="analytics-stat">
+          <div class="num" id="total-scans">—</div>
+          <div class="lbl">Total Scans</div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h3 style="font-size:14px;font-weight:600">Tracked Links</h3>
+        <button class="track-btn" id="refresh-analytics" style="width:auto;padding:6px 14px">↻ Refresh</button>
+      </div>
+      <div id="analytics-links"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">💡 About Tracking</div>
+      <p style="font-size:13px;line-height:1.6;color:var(--text-secondary)">URL-type QR codes can be tracked. On the Generate tab, use the <b>"Track this link"</b> button next to any URL to create a short link. You can also choose a custom slug.</p>
+    </div>
+  </section>
+
+  <section class="view" id="view-bulk">
+    <div class="card">
+      <div class="card-title">Bulk Generate from CSV</div>
+      <p class="bulk-hint">One entry per line. Optionally use <code>data,filename</code> format.</p>
+      <div class="field">
+        <label>CSV Data</label>
+        <textarea id="bulk-input" rows="8" placeholder="https://example.com,site1&#10;https://github.com,github"></textarea>
+      </div>
+      <button class="btn btn-primary btn-full" id="bulk-generate">📦 Generate ZIP</button>
+      <div class="bulk-progress" id="bulk-progress"><div class="bulk-progress-bar" id="bulk-progress-bar"></div></div>
+    </div>
+  </section>
+</main>
+
+<nav class="bottom-nav">
+  <button data-tab="generate" class="active"><span class="tab-icon">🎨</span>Generate</button>
+  <button data-tab="scan"><span class="tab-icon">📷</span>Scan</button>
+  <button data-tab="history"><span class="tab-icon">🕐</span>History</button>
+  <button data-tab="analytics"><span class="tab-icon">📊</span>Analytics</button>
+  <button data-tab="bulk"><span class="tab-icon">📦</span>Bulk</button>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const state = { type: 'text', logoDataUrl: null, qrCode: null, frame: false, darkMode: false, selectedSocial: null, shortUrlCache: {} };
+const $ = (id) => document.getElementById(id);
+const val = (id) => ($(id) ? $(id).value.trim() : '');
+
+const COUNTER_WORKSPACE = 'qraft-app';
+const COUNTER_KEY = 'qr-generations';
+
+async function incrementGenerationCounter() {
+  try {
+    const res = await fetch(`https://api.counterapi.dev/v1/${COUNTER_WORKSPACE}/${COUNTER_KEY}/up`);
+    if (res.ok) { const data = await res.json(); const el = $('gen-count'); if (el) el.textContent = (data.count || data.value || 0).toLocaleString(); }
+  } catch (e) { console.warn('Counter unavailable', e); }
+}
+
+function initTheme() {
+  const saved = localStorage.getItem('qraft-theme');
+  state.darkMode = saved ? saved === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+  applyTheme();
+}
+function applyTheme() {
+  document.documentElement.setAttribute('data-theme', state.darkMode ? 'dark' : 'light');
+  $('theme-toggle').textContent = state.darkMode ? '☀️' : '🌙';
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', state.darkMode ? '#0a0a0a' : '#ffffff');
+}
+$('theme-toggle').addEventListener('click', () => {
+  state.darkMode = !state.darkMode;
+  localStorage.setItem('qraft-theme', state.darkMode ? 'dark' : 'light');
+  applyTheme();
+});
+
+const SOCIAL_ICONS = {
+  facebook: 'M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z',
+  twitter: 'M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z',
+  instagram: 'M12 0C8.74 0 8.333.015 7.053.072 5.775.132 4.905.333 4.14.63c-.789.306-1.459.717-2.126 1.384S.935 3.35.63 4.14C.333 4.905.131 5.775.072 7.053.012 8.333 0 8.74 0 12s.015 3.667.072 4.947c.06 1.277.261 2.148.558 2.913.306.788.717 1.459 1.384 2.126.667.666 1.336 1.079 2.126 1.384.766.296 1.636.499 2.913.558C8.333 23.988 8.74 24 12 24s3.667-.015 4.947-.072c1.277-.06 2.148-.262 2.913-.558.788-.306 1.459-.718 2.126-1.384.666-.667 1.079-1.335 1.384-2.126.296-.765.499-1.636.558-2.913.06-1.28.072-1.687.072-4.947s-.015-3.667-.072-4.947c-.06-1.277-.262-2.149-.558-2.913-.306-.789-.718-1.459-1.384-2.126C21.319 1.347 20.651.935 19.86.63c-.765-.297-1.636-.499-2.913-.558C15.667.012 15.26 0 12 0zm0 2.16c3.203 0 3.585.016 4.85.071 1.17.055 1.805.249 2.227.415.562.217.96.477 1.382.896.419.42.679.819.896 1.381.164.422.36 1.057.413 2.227.057 1.266.07 1.646.07 4.85s-.015 3.585-.074 4.85c-.061 1.17-.256 1.805-.421 2.227-.224.562-.479.96-.899 1.382-.419.419-.824.679-1.38.896-.42.164-1.065.36-2.235.413-1.274.057-1.649.07-4.859.07-3.211 0-3.586-.015-4.859-.074-1.171-.061-1.816-.256-2.236-.421-.569-.224-.96-.479-1.379-.899-.421-.419-.69-.824-.9-1.38-.165-.42-.359-1.065-.42-2.235-.045-1.26-.061-1.649-.061-4.844 0-3.196.016-3.586.061-4.861.061-1.17.255-1.814.42-2.234.21-.57.479-.96.9-1.381.419-.419.81-.689 1.379-.898.42-.166 1.051-.361 2.221-.421 1.275-.045 1.65-.06 4.859-.06l.045.03zm0 3.678c-3.405 0-6.162 2.76-6.162 6.162 0 3.405 2.76 6.162 6.162 6.162 3.405 0 6.162-2.76 6.162-6.162 0-3.405-2.76-6.162-6.162-6.162zM12 16c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4zm7.846-10.405c0 .795-.646 1.44-1.44 1.44-.795 0-1.44-.646-1.44-1.44 0-.794.646-1.439 1.44-1.439.793-.001 1.44.645 1.44 1.439z',
+  whatsapp: 'M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z',
+  youtube: 'M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z',
+  linkedin: 'M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z',
+  github: 'M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12',
+  telegram: 'M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z',
+  tiktok: 'M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z',
+  pinterest: 'M12.017 0C5.396 0 .029 5.367.029 11.987c0 5.079 3.158 9.417 7.618 11.162-.105-.949-.199-2.403.041-3.439.219-.937 1.406-5.957 1.406-5.957s-.359-.72-.359-1.781c0-1.663.967-2.911 2.168-2.911 1.024 0 1.518.769 1.518 1.688 0 1.029-.653 2.567-.992 3.992-.285 1.193.6 2.165 1.775 2.165 2.128 0 3.768-2.245 3.768-5.487 0-2.861-2.063-4.869-5.008-4.869-3.41 0-5.409 2.562-5.409 5.199 0 1.033.394 2.143.889 2.741.099.12.112.225.085.345-.09.375-.293 1.199-.334 1.363-.053.225-.172.271-.401.165-1.495-.69-2.433-2.878-2.433-4.646 0-3.776 2.748-7.252 7.92-7.252 4.158 0 7.392 2.967 7.392 6.923 0 4.135-2.607 7.462-6.233 7.462-1.214 0-2.354-.629-2.758-1.379l-.749 2.848c-.269 1.045-1.004 2.352-1.498 3.146 1.123.345 2.306.535 3.55.535 6.607 0 11.985-5.365 11.985-11.987C23.97 5.39 18.592.026 11.985.026L12.017 0z',
+  reddit: 'M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 0 1 .042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 0 1 4.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 0 1 .14-.197.35.35 0 0 1 .238-.042l2.906.617a1.214 1.214 0 0 1 1.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 0 0-.231.094.33.33 0 0 0 0 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 0 0 .029-.463.33.33 0 0 0-.464 0c-.547.533-1.684.73-2.512.73-.828 0-1.979-.196-2.512-.73a.326.326 0 0 0-.232-.095z',
+  snapchat: 'M12.206.793c.99 0 4.347.276 5.93 3.821.529 1.193.403 3.219.299 4.847l-.003.06c-.012.18-.022.345-.03.51.075.045.203.09.401.09.3-.016.659-.12 1.033-.301.165-.088.344-.104.464-.104.182 0 .359.029.509.09.45.149.734.479.734.838.015.449-.39.839-1.213 1.168-.089.029-.209.075-.344.119-.45.135-1.139.36-1.333.81-.09.224-.061.524.12.868l.015.015c.06.136 1.526 3.475 4.791 4.014.255.044.435.27.42.509 0 .075-.015.149-.045.225-.24.569-1.273.988-3.146 1.271-.059.091-.12.375-.164.57-.029.179-.074.36-.134.553-.076.271-.27.405-.555.405h-.03c-.135 0-.313-.031-.538-.074-.36-.075-.765-.135-1.273-.135-.3 0-.599.015-.913.074-.6.104-1.123.464-1.723.884-.853.599-1.826 1.288-3.294 1.288-.06 0-.119-.015-.18-.015h-.149c-1.468 0-2.427-.675-3.279-1.288-.599-.42-1.107-.779-1.707-.884-.314-.045-.629-.074-.928-.074-.54 0-.958.089-1.272.149-.211.043-.391.074-.54.074-.374 0-.523-.224-.583-.42-.061-.192-.09-.389-.135-.567-.046-.181-.105-.494-.166-.57-1.918-.222-2.95-.642-3.189-1.226-.031-.063-.052-.15-.055-.225-.015-.243.165-.465.42-.509 3.264-.54 4.73-3.879 4.791-4.02l.016-.029c.18-.345.224-.645.119-.869-.195-.434-.884-.658-1.332-.809-.121-.029-.24-.074-.346-.119-1.107-.435-1.257-.93-1.197-1.273.09-.479.674-.793 1.168-.793.146 0 .27.029.383.074.42.194.789.3 1.104.3.234 0 .384-.06.465-.105l-.046-.569c-.098-1.626-.225-3.651.307-4.837C7.392 1.077 10.739.807 11.727.807l.419-.015h.06z'
+};
+const SOCIAL_ORDER = ['facebook', 'twitter', 'instagram', 'whatsapp', 'youtube', 'linkedin', 'github', 'telegram', 'tiktok', 'pinterest', 'reddit', 'snapchat'];
+
+function getSocialDataUrl(key, fgColor, bgColor) {
+  const path = SOCIAL_ICONS[key];
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28"><rect width="28" height="28" rx="5" fill="${bgColor}"/><g transform="translate(2,2)"><path fill="${fgColor}" d="${path}"/></g></svg>`;
+  return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
+}
+
+function renderSocialLogos() {
+  const container = $('social-logos');
+  container.innerHTML = SOCIAL_ORDER.map(key => {
+    const active = state.selectedSocial === key ? ' active' : '';
+    return `<button class="social-logo-btn${active}" data-logo="${key}" title="${key}"><svg viewBox="0 0 24 24" fill="currentColor"><path d="${SOCIAL_ICONS[key]}"/></svg></button>`;
+  }).join('');
+  container.querySelectorAll('.social-logo-btn').forEach(btn => btn.addEventListener('click', () => selectSocialLogo(btn.dataset.logo)));
+}
+
+function selectSocialLogo(key) {
+  if (state.selectedSocial === key) {
+    state.selectedSocial = null; state.logoDataUrl = null;
+    $('logo-preview').classList.remove('visible'); $('remove-logo').classList.remove('visible');
+  } else {
+    state.selectedSocial = key;
+    state.logoDataUrl = getSocialDataUrl(key, $('fg-color').value, $('bg-color').value);
+    $('logo-preview').src = state.logoDataUrl; $('logo-preview').classList.add('visible'); $('remove-logo').classList.add('visible'); $('logo-input').value = '';
+  }
+  $('social-logos').querySelectorAll('.social-logo-btn').forEach(b => b.classList.toggle('active', b.dataset.logo === state.selectedSocial));
+  renderQR();
+}
+
+const field = (label, id, type = 'text', placeholder = '') => `<div class="field"><label for="${id}">${label}</label><input type="${type}" id="${id}" placeholder="${placeholder}" /></div>`;
+const textarea = (label, id, placeholder = '', rows = 3) => `<div class="field"><label for="${id}">${label}</label><textarea id="${id}" rows="${rows}" placeholder="${placeholder}"></textarea></div>`;
+
+const TYPE_FORMS = {
+  text: textarea('Text', 'f-text', 'Enter any text...', 3),
+  url: field('URL', 'f-url', 'url', 'https://example.com') + 
+    `<div class="field"><label>Custom slug (optional)</label><div style="display:flex;gap:8px;align-items:center"><span style="color:var(--text-secondary);font-size:13px;white-space:nowrap">/r/</span><input type="text" id="f-slug" placeholder="my-link" maxlength="30" autocapitalize="off" autocorrect="off" spellcheck="false" style="flex:1" /></div><div id="slug-preview" class="slug-hint">Leave empty for a random code</div></div><button class="track-btn" id="track-btn">🔗 Track this link</button><div id="track-info" style="font-size:12px;color:var(--text-secondary);margin-top:8px;display:none"></div>`,
+  wifi: field('Network Name (SSID)', 'f-ssid', 'text', 'MyWiFi') + field('Password', 'f-wifi-pw', 'password', '••••••••') + `<div class="field"><label for="f-wifi-enc">Encryption</label><select id="f-wifi-enc"><option value="WPA">WPA/WPA2</option><option value="WEP">WEP</option><option value="nopass">None (Open)</option></select></div><div class="field"><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="f-wifi-hidden" style="width:auto">Hidden network</label></div>`,
+  vcard: `<div class="field-row"><div class="field"><label>First Name</label><input type="text" id="f-vc-fn" placeholder="John"></div><div class="field"><label>Last Name</label><input type="text" id="f-vc-ln" placeholder="Doe"></div></div>` + field('Phone', 'f-vc-phone', 'tel', '+8801700000000') + field('Email', 'f-vc-email', 'email', 'john@example.com') + field('Organization', 'f-vc-org', 'text', 'Acme Inc') + field('Job Title', 'f-vc-title', 'text', 'Developer') + field('Website', 'f-vc-web', 'url', 'https://example.com'),
+  email: field('Email Address', 'f-email', 'email', 'to@example.com') + field('Subject', 'f-email-subject', 'text', 'Hello') + textarea('Message', 'f-email-body', 'Type message...', 2),
+  sms: field('Phone Number', 'f-sms-phone', 'tel', '+8801700000000') + textarea('Message', 'f-sms-msg', 'Type message...', 2),
+  whatsapp: field('Phone (with country code)', 'f-wa-phone', 'tel', '8801700000000') + textarea('Message', 'f-wa-msg', 'Hello!', 2),
+  phone: field('Phone Number', 'f-phone', 'tel', '+8801700000000'),
+  location: `<div class="field-row"><div class="field"><label>Latitude</label><input type="text" id="f-lat" placeholder="23.8103"></div><div class="field"><label>Longitude</label><input type="text" id="f-lng" placeholder="90.4125"></div></div><button class="btn btn-secondary btn-full" id="geo-btn" style="margin-top:4px">📍 Use My Location</button>`,
+  event: field('Title', 'f-ev-title', 'text', 'Meeting') + field('Location', 'f-ev-loc', 'text', 'Office') + `<div class="field-row"><div class="field"><label>Start</label><input type="datetime-local" id="f-ev-start"></div><div class="field"><label>End</label><input type="datetime-local" id="f-ev-end"></div></div>` + textarea('Description', 'f-ev-desc', 'Details...', 2)
+};
+
+function renderForm(type) {
+  $('form-area').innerHTML = TYPE_FORMS[type] || TYPE_FORMS.text;
+  $('form-area').querySelectorAll('input, textarea, select').forEach(el => {
+    el.addEventListener('input', debouncedRender);
+    el.addEventListener('change', debouncedRender);
+  });
+  const geoBtn = $('geo-btn');
+  if (geoBtn) {
+    geoBtn.addEventListener('click', () => {
+      if (!navigator.geolocation) { showToast('Geolocation not supported'); return; }
+      showToast('Getting location...');
+      navigator.geolocation.getCurrentPosition((pos) => { $('f-lat').value = pos.coords.latitude.toFixed(6); $('f-lng').value = pos.coords.longitude.toFixed(6); renderQR(); }, (err) => showToast('Location error: ' + err.message));
+    });
+  }
+  const trackBtn = $('track-btn');
+  if (trackBtn) {
+    trackBtn.addEventListener('click', handleTrackUrl);
+    ['f-url', 'f-slug'].forEach(id => {
+      const el = $(id);
+      if (el) el.addEventListener('input', () => { if (id === 'f-slug') el.value = el.value.toLowerCase(); updateTrackButtonState(); if (id === 'f-slug') updateSlugPreview(); });
+    });
+    updateTrackButtonState(); updateSlugPreview();
+  }
+  renderQR();
+}
+
+$('type-pills').addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-type]');
+  if (!btn) return;
+  $('type-pills').querySelectorAll('button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  state.type = btn.dataset.type;
+  renderForm(state.type);
+});
+
+async function handleTrackUrl() {
+  const raw  = val('f-url');
+  const slug = val('f-slug').toLowerCase().trim();
+  const cacheKey = raw + '|' + slug;
+
+  if (!raw) { showToast('Enter a URL first'); return; }
+  if (!/^https?:\/\//i.test(raw)) { showToast('URL must start with http:// or https://'); return; }
+  if (slug) {
+    if (slug.length < 3 || slug.length > 30) { showToast('Slug must be 3–30 characters'); return; }
+    if (!/^[a-z0-9-_]+$/.test(slug) || !/^[a-z0-9]/.test(slug) || !/[a-z0-9]$/.test(slug)) { showToast('Slug: lowercase letters, numbers, - or _ only'); return; }
+  }
+  if (state.shortUrlCache[cacheKey]) { showToast('Already tracking: ' + state.shortUrlCache[cacheKey]); return; }
+
+  const btn = $('track-btn');
+  const originalText = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Creating short link...';
+
+  try {
+    const res = await fetch('/api/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ targetUrl: raw, customSlug: slug || undefined }) });
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 409) { showToast(`"${slug}" is already taken — try another`); btn.disabled = false; btn.textContent = originalText; return; }
+    if (!res.ok || !data.shortUrl) throw new Error(data.error || 'Failed to create short link');
+
+    state.shortUrlCache[cacheKey] = data.shortUrl;
+    const info = $('track-info');
+    if (info) { info.style.display = 'block'; info.innerHTML = `✅ Tracking enabled · <code style="font-family:monospace;background:var(--bg);padding:2px 6px;border-radius:4px">${data.shortUrl}</code>`; }
+    showToast(data.custom ? 'Custom short link created' : 'Tracking enabled');
+    updateTrackButtonState(); renderQR();
+  } catch (e) { showToast(e.message || 'Tracking unavailable'); btn.disabled = false; btn.textContent = originalText; }
+}
+
+function updateTrackButtonState() {
+  const btn = $('track-btn'); if (!btn) return;
+  const raw = val('f-url'); const slug = val('f-slug').toLowerCase().trim();
+  const shortUrl = state.shortUrlCache[raw + '|' + slug]; const info = $('track-info');
+  if (raw && shortUrl) {
+    btn.classList.add('active'); btn.textContent = '✓ Tracking enabled'; btn.disabled = true;
+    if (info) { info.style.display = 'block'; info.innerHTML = `✅ Tracking enabled · <code style="font-family:monospace;background:var(--bg);padding:2px 6px;border-radius:4px">${shortUrl}</code>`; }
+  } else {
+    btn.classList.remove('active'); btn.textContent = '🔗 Track this link'; btn.disabled = false;
+    if (info) info.style.display = 'none';
+  }
+}
+
+function updateSlugPreview() {
+  const preview = $('slug-preview'); if (!preview) return;
+  const slug = val('f-slug').toLowerCase().trim();
+  preview.classList.remove('error');
+  if (!slug) preview.textContent = 'Leave empty for a random code';
+  else if (!/^[a-z0-9-_]{3,30}$/.test(slug) || !/^[a-z0-9]/.test(slug) || !/[a-z0-9]$/.test(slug)) { preview.textContent = '⚠ Only lowercase letters, numbers, - and _ (3–30 chars)'; preview.classList.add('error'); }
+  else preview.innerHTML = `Preview: <code>${location.origin}/r/${slug}</code>`;
+}
+
+const esc = (s) => String(s || '').replace(/([\\;,:"])/g, '\\$1');
+function formatIcal(dateStr) { if (!dateStr) return ''; const d = new Date(dateStr); const p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}T${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`; }
+
+function buildData() {
+  const t = state.type;
+  if (t === 'text') return val('f-text');
+  if (t === 'url') { const raw = val('f-url'); if (!raw) return ''; return state.shortUrlCache[raw + '|' + val('f-slug').toLowerCase().trim()] || raw; }
+  if (t === 'wifi') { const ssid = val('f-ssid'); if (!ssid) return ''; const enc = val('f-wifi-enc'); const pw = enc === 'nopass' ? '' : val('f-wifi-pw'); return `WIFI:T:${enc};S:${esc(ssid)};P:${esc(pw)};${$('f-wifi-hidden')?.checked ? 'H:true;' : ''};`; }
+  if (t === 'vcard') {
+    const fn = val('f-vc-fn'), ln = val('f-vc-ln');
+    if (!fn && !ln && !val('f-vc-phone') && !val('f-vc-email')) return '';
+    const lines = ['BEGIN:VCARD', 'VERSION:3.0', `N:${esc(ln)};${esc(fn)};;;`, `FN:${esc((fn + ' ' + ln).trim())}`];
+    if (val('f-vc-org')) lines.push(`ORG:${esc(val('f-vc-org'))}`);
+    if (val('f-vc-title')) lines.push(`TITLE:${esc(val('f-vc-title'))}`);
+    if (val('f-vc-phone')) lines.push(`TEL;TYPE=CELL:${val('f-vc-phone')}`);
+    if (val('f-vc-email')) lines.push(`EMAIL:${val('f-vc-email')}`);
+    if (val('f-vc-web')) lines.push(`URL:${val('f-vc-web')}`);
+    lines.push('END:VCARD'); return lines.join('\n');
+  }
+  if (t === 'email') { const to = val('f-email'); if (!to) return ''; const p = []; if (val('f-email-subject')) p.push('subject=' + encodeURIComponent(val('f-email-subject'))); if (val('f-email-body')) p.push('body=' + encodeURIComponent(val('f-email-body'))); return `mailto:${to}${p.length ? '?' + p.join('&') : ''}`; }
+  if (t === 'sms') { const p = val('f-sms-phone'); return p ? `SMSTO:${p}:${val('f-sms-msg')}` : ''; }
+  if (t === 'whatsapp') { const p = val('f-wa-phone').replace(/\D/g, ''); if (!p) return ''; const m = val('f-wa-msg'); return `https://wa.me/${p}${m ? '?text=' + encodeURIComponent(m) : ''}`; }
+  if (t === 'phone') { const p = val('f-phone'); return p ? `tel:${p}` : ''; }
+  if (t === 'location') { const lat = val('f-lat'), lng = val('f-lng'); return (lat && lng) ? `geo:${lat},${lng}` : ''; }
+  if (t === 'event') {
+    const title = val('f-ev-title'); if (!title) return '';
+    const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'BEGIN:VEVENT', `SUMMARY:${esc(title)}`];
+    if (val('f-ev-loc')) lines.push(`LOCATION:${esc(val('f-ev-loc'))}`);
+    if (val('f-ev-start')) lines.push(`DTSTART:${formatIcal(val('f-ev-start'))}`);
+    if (val('f-ev-end')) lines.push(`DTEND:${formatIcal(val('f-ev-end'))}`);
+    if (val('f-ev-desc')) lines.push(`DESCRIPTION:${esc(val('f-ev-desc'))}`);
+    lines.push('END:VEVENT', 'END:VCALENDAR'); return lines.join('\n');
+  }
+  return '';
+}
+
+function contrastRatio(hex1, hex2) {
+  const L = (hex) => { const m = hex.replace('#', '').match(/.{2}/g); const [r, g, b] = m.map(x => { const v = parseInt(x, 16) / 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+  const a = L(hex1), b = L(hex2); return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+}
+function checkContrast() { $('contrast-warn').classList.toggle('visible', contrastRatio($('fg-color').value, $('bg-color').value) < 3); }
+
+function buildOptions(data) {
+  const size = parseInt($('size-slider').value, 10);
+  const useGradient = $('gradient-toggle').checked;
+  const dotType = $('dot-style').value;
+  const cornerType = $('corner-style').value;
+  const fg = $('fg-color').value;
+  const bg = $('bg-color').value;
+  const dotsOptions = { type: dotType };
+  if (useGradient) {
+    dotsOptions.gradient = { type: 'linear', rotation: 0, colorStops: [{ offset: 0, color: $('fg-grad-start').value }, { offset: 1, color: $('fg-grad-end').value }] };
+  } else dotsOptions.color = fg;
+
+  const opts = {
+    width: size, height: size, data, margin: 8, qrOptions: { errorCorrectionLevel: 'H' }, dotsOptions, backgroundOptions: { color: bg },
+    cornersSquareOptions: { color: useGradient ? $('fg-grad-end').value : fg, type: cornerType },
+    cornersDotOptions: { color: useGradient ? $('fg-grad-end').value : fg, type: cornerType === 'dot' ? 'dot' : 'square' },
+    imageOptions: { crossOrigin: 'anonymous', margin: 6, imageSize: 0.35 }
+  };
+  if (state.logoDataUrl) opts.image = state.logoDataUrl;
+  return opts;
+}
+
+let debounceTimer = null;
+function debouncedRender() { clearTimeout(debounceTimer); debounceTimer = setTimeout(renderQR, 180); }
+let lastGeneratedData = '';
+
+function renderQR() {
+  const data = buildData();
+  const hasData = data && data.length > 0;
+  $('empty-state').style.display = hasData ? 'none' : 'block';
+  $('qr-canvas').style.display = hasData ? 'block' : 'none';
+  ['dl-png', 'dl-svg', 'dl-pdf', 'copy-btn', 'save-history'].forEach(id => $(id).disabled = !hasData);
+  $('share-btn').disabled = !hasData || !navigator.share;
+  if (!hasData) { if (state.qrCode) { state.qrCode = null; $('qr-canvas').innerHTML = ''; } return; }
+  checkContrast();
+  const opts = buildOptions(data);
+  if (!state.qrCode) { state.qrCode = new QRCodeStyling(opts); $('qr-canvas').innerHTML = ''; state.qrCode.append($('qr-canvas')); }
+  else { state.qrCode.update(opts); }
+  if (data !== lastGeneratedData) { lastGeneratedData = data; incrementGenerationCounter(); }
+}
+
+['fg-color', 'bg-color'].forEach(id => {
+  $(id).addEventListener('input', () => {
+    if (state.selectedSocial) { state.logoDataUrl = getSocialDataUrl(state.selectedSocial, $('fg-color').value, $('bg-color').value); $('logo-preview').src = state.logoDataUrl; }
+    checkContrast(); debouncedRender();
+  });
+});
+
+['fg-grad-start', 'fg-grad-end', 'dot-style', 'corner-style', 'gradient-toggle', 'frame-toggle'].forEach(id => {
+  const el = $(id);
+  if (el) el.addEventListener('input', () => {
+    if (id === 'gradient-toggle') $('gradient-colors').style.display = el.checked ? 'flex' : 'none';
+    if (id === 'frame-toggle') { state.frame = el.checked; $('qr-wrapper').classList.toggle('frame', state.frame); }
+    debouncedRender();
+  });
+});
+
+$('size-slider').addEventListener('input', () => { $('size-value').textContent = $('size-slider').value + 'px'; debouncedRender(); });
+
+$('logo-input').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file || !file.type.startsWith('image/')) { showToast('Image only'); return; }
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    state.selectedSocial = null; $('social-logos').querySelectorAll('.social-logo-btn').forEach(b => b.classList.remove('active'));
+    state.logoDataUrl = ev.target.result; $('logo-preview').src = state.logoDataUrl; $('logo-preview').classList.add('visible'); $('remove-logo').classList.add('visible'); renderQR();
+  };
+  reader.readAsDataURL(file);
+});
+
+$('remove-logo').addEventListener('click', () => {
+  state.logoDataUrl = null; state.selectedSocial = null;
+  $('logo-preview').src = ''; $('logo-preview').classList.remove('visible'); $('remove-logo').classList.remove('visible'); $('logo-input').value = '';
+  $('social-logos').querySelectorAll('.social-logo-btn').forEach(b => b.classList.remove('active')); renderQR();
+});
+
+$('design-toggle').addEventListener('click', () => { $('design-toggle').classList.toggle('open'); $('design-body').classList.toggle('open'); });
+
+const PRESETS = [
+  { name: 'Classic', fg: '#000000', bg: '#ffffff', dot: 'square', corner: 'square' },
+  { name: 'Modern', fg: '#1a1a1a', bg: '#fafafa', dot: 'rounded', corner: 'extra-rounded' },
+  { name: 'Ocean', fg: '#0077b6', bg: '#caf0f8', dot: 'dots', corner: 'extra-rounded' },
+  { name: 'Sunset', fg: '#e63946', bg: '#ffe5e5', dot: 'classy-rounded', corner: 'extra-rounded' },
+  { name: 'Forest', fg: '#1b4332', bg: '#d8f3dc', dot: 'dots', corner: 'dot' },
+  { name: 'Purple', fg: '#6a4c93', bg: '#f0e6ff', dot: 'rounded', corner: 'extra-rounded' }
+];
+function renderPresets() {
+  $('presets').innerHTML = PRESETS.map((p, i) => `<button class="preset-btn" data-i="${i}" title="${p.name}" style="background:linear-gradient(135deg,${p.fg} 50%,${p.bg} 50%)"></button>`).join('');
+  $('presets').querySelectorAll('.preset-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const p = PRESETS[+btn.dataset.i];
+      $('fg-color').value = p.fg; $('bg-color').value = p.bg; $('dot-style').value = p.dot; $('corner-style').value = p.corner;
+      $('gradient-toggle').checked = false; $('gradient-colors').style.display = 'none';
+      if (state.selectedSocial) { state.logoDataUrl = getSocialDataUrl(state.selectedSocial, p.fg, p.bg); $('logo-preview').src = state.logoDataUrl; }
+      renderQR(); showToast(p.name + ' preset applied');
+    });
+  });
+}
+
+function showToast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(showToast._t); showToast._t = setTimeout(() => t.classList.remove('show'), 2200); }
+function downloadBlob(blob, filename) { const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); document.body.removeChild(a); setTimeout(() => URL.revokeObjectURL(url), 1000); }
+async function blobToImage(blob) { return new Promise((res, rej) => { const img = new Image(); img.onload = () => res(img); img.onerror = rej; img.src = URL.createObjectURL(blob); }); }
+async function blobToDataUrl(blob) { return new Promise((res) => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(blob); }); }
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+
+async function generateHighResBlob() {
+  const originalSize = parseInt($('size-slider').value, 10);
+  const exportSize = Math.max(originalSize, 1024);
+  const opts = buildOptions(buildData());
+  opts.width = exportSize; opts.height = exportSize;
+  const temp = new QRCodeStyling(opts);
+  const rawBlob = await temp.getRawData('png');
+  if (!state.frame) return rawBlob;
+  const img = await blobToImage(rawBlob);
+  const pad = Math.round(exportSize * 0.12); const bottomPad = Math.round(exportSize * 0.16);
+  const c = document.createElement('canvas'); c.width = exportSize + pad * 2; c.height = exportSize + pad + bottomPad;
+  const ctx = c.getContext('2d'); const isDark = state.darkMode;
+  ctx.fillStyle = isDark ? '#ffffff' : '#000000'; ctx.fillRect(0, 0, c.width, c.height);
+  ctx.fillStyle = isDark ? '#000000' : '#ffffff'; ctx.fillRect(6, 6, c.width - 12, c.height - 12);
+  ctx.drawImage(img, pad, pad, exportSize, exportSize);
+  ctx.fillStyle = isDark ? '#ffffff' : '#000000'; ctx.font = `bold ${Math.round(exportSize * 0.06)}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('SCAN ME', c.width / 2, exportSize + pad + bottomPad / 2 - 4);
+  return new Promise(res => c.toBlob(res, 'image/png'));
+}
+
+$('dl-png').addEventListener('click', async () => { try { showToast('Preparing PNG...'); downloadBlob(await generateHighResBlob(), 'qraft-qr.png'); showToast('PNG downloaded'); } catch (e) { showToast('Download failed'); } });
+$('dl-svg').addEventListener('click', async () => { try { const opts = buildOptions(buildData()); opts.width = 800; opts.height = 800; const temp = new QRCodeStyling(opts); downloadBlob(await temp.getRawData('svg'), 'qraft-qr.svg'); showToast('SVG downloaded'); } catch (e) { showToast('Download failed'); } });
+$('dl-pdf').addEventListener('click', async () => {
+  try {
+    showToast('Preparing PDF...'); const blob = await generateHighResBlob(); const dataUrl = await blobToDataUrl(blob);
+    const { jsPDF } = window.jspdf; const size = 120; const pdf = new jsPDF({ unit: 'mm', format: [size, size] });
+    pdf.addImage(dataUrl, 'PNG', 0, 0, size, size); pdf.save('qraft-qr.pdf'); showToast('PDF downloaded');
+  } catch (e) { showToast('PDF failed'); }
+});
+$('copy-btn').addEventListener('click', async () => {
+  try { const blob = await generateHighResBlob(); if (navigator.clipboard && window.ClipboardItem) { await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]); showToast('Copied to clipboard'); } else throw new Error(); } catch (e) { showToast('Copy failed'); }
+});
+$('share-btn').addEventListener('click', async () => {
+  try { const blob = await generateHighResBlob(); const file = new File([blob], 'qraft-qr.png', { type: 'image/png' }); if (navigator.canShare && navigator.canShare({ files: [file] })) await navigator.share({ files: [file], title: 'Qraft QR Code' }); else showToast('Share not supported'); } catch (e) { if (e.name !== 'AbortError') showToast('Share failed'); }
+});
+
+function loadHistory() { return JSON.parse(localStorage.getItem('qraft-history') || '[]'); }
+function saveHistory(list) { localStorage.setItem('qraft-history', JSON.stringify(list.slice(0, 30))); }
+
+$('save-history').addEventListener('click', () => {
+  const data = buildData(); if (!data) return;
+  const list = loadHistory();
+  list.unshift({ id: Date.now(), type: state.type, data, options: { fg: $('fg-color').value, bg: $('bg-color').value, dot: $('dot-style').value, corner: $('corner-style').value, size: $('size-slider').value, frame: state.frame, logo: state.logoDataUrl, social: state.selectedSocial, useGradient: $('gradient-toggle').checked, gradStart: $('fg-grad-start').value, gradEnd: $('fg-grad-end').value }, timestamp: Date.now() });
+  saveHistory(list); showToast('Saved to history'); renderHistory();
+});
+
+function renderHistory() {
+  const list = loadHistory(); const container = $('history-list'); const empty = $('empty-history');
+  if (!list.length) { container.innerHTML = ''; empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+  container.innerHTML = list.map(item => `<div class="history-item"><div class="history-thumb" data-id="${item.id}"></div><div class="history-info"><div class="type">${item.type}</div><div class="data">${escapeHtml(item.data.slice(0, 60))}</div></div><div class="history-actions"><button data-act="load" data-id="${item.id}" title="Load">↻</button><button data-act="del" data-id="${item.id}" title="Delete">🗑</button></div></div>`).join('');
+  list.forEach(item => {
+    const thumb = container.querySelector(`.history-thumb[data-id="${item.id}"]`); if (!thumb) return;
+    thumb.innerHTML = '';
+    try {
+      const opts = { width: 48, height: 48, data: item.data, margin: 1, dotsOptions: { color: item.options.fg, type: 'rounded' }, backgroundOptions: { color: '#ffffff' } };
+      if (item.options.logo) { opts.image = item.options.logo; opts.imageOptions = { margin: 1, imageSize: 0.3 }; }
+      new QRCodeStyling(opts).append(thumb);
+    } catch (e) { thumb.textContent = '?'; }
+  });
+  container.querySelectorAll('button[data-act]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = +btn.dataset.id;
+      if (btn.dataset.act === 'del') { saveHistory(loadHistory().filter(i => i.id !== id)); renderHistory(); showToast('Deleted'); }
+      else restoreFromHistory(id);
+    });
+  });
+}
+
+function restoreFromHistory(id) {
+  const item = loadHistory().find(i => i.id === id); if (!item) return;
+  switchTab('generate'); state.type = item.type;
+  document.querySelectorAll('#type-pills button').forEach(b => b.classList.toggle('active', b.dataset.type === item.type));
+  renderForm(item.type);
+  const o = item.options;
+  $('fg-color').value = o.fg; $('bg-color').value = o.bg; $('dot-style').value = o.dot; $('corner-style').value = o.corner;
+  $('size-slider').value = o.size; $('size-value').textContent = o.size + 'px';
+  $('gradient-toggle').checked = o.useGradient || false; $('gradient-colors').style.display = o.useGradient ? 'flex' : 'none';
+  $('fg-grad-start').value = o.gradStart || '#0077b6'; $('fg-grad-end').value = o.gradEnd || '#00b4d8';
+  state.frame = o.frame || false; $('frame-toggle').checked = state.frame; $('qr-wrapper').classList.toggle('frame', state.frame);
+  state.selectedSocial = o.social || null; state.logoDataUrl = o.logo || null;
+  $('social-logos').querySelectorAll('.social-logo-btn').forEach(b => b.classList.toggle('active', b.dataset.logo === state.selectedSocial));
+  if (state.logoDataUrl) { $('logo-preview').src = state.logoDataUrl; $('logo-preview').classList.add('visible'); $('remove-logo').classList.add('visible'); }
+  else { $('logo-preview').classList.remove('visible'); $('remove-logo').classList.remove('visible'); }
+  injectDataIntoForm(item.type, item.data); renderQR(); showToast('Loaded from history');
+}
+
+function injectDataIntoForm(type, data) {
+  const simple = { text: 'f-text', url: 'f-url', phone: 'f-phone' };
+  if (simple[type]) { const el = $(simple[type]); if (el) { el.value = data; return; } }
+  if (type !== 'text') { state.type = 'text'; document.querySelectorAll('#type-pills button').forEach(b => b.classList.toggle('active', b.dataset.type === 'text')); renderForm('text'); $('f-text').value = data; }
+}
+
+$('clear-history').addEventListener('click', () => { if (confirm('Delete all history?')) { localStorage.removeItem('qraft-history'); renderHistory(); showToast('History cleared'); } });
+
+let html5QrCode = null; let scannerRunning = false;
+async function startScanner() {
+  if (scannerRunning) return;
+  try {
+    html5QrCode = new Html5Qrcode('scanner-region');
+    await html5QrCode.start({ facingMode: 'environment' }, { fps: 10, qrbox: { width: 250, height: 250 } }, (text) => onScanSuccess(text), () => {});
+    scannerRunning = true; $('scan-start').disabled = true; $('scan-stop').disabled = false;
+  } catch (e) { showToast('Camera error: ' + (e.message || 'unknown')); scannerRunning = false; }
+}
+async function stopScanner() {
+  if (html5QrCode && scannerRunning) { try { await html5QrCode.stop(); await html5QrCode.clear(); } catch (e) {} scannerRunning = false; $('scan-start').disabled = false; $('scan-stop').disabled = true; }
+}
+function onScanSuccess(text) {
+  const result = $('scan-result'); result.classList.add('visible'); const isUrl = /^https?:\/\//i.test(text);
+  result.innerHTML = `<div style="font-size:11px;color:var(--text-secondary);margin-bottom:4px">SCANNED</div><div style="word-break:break-all;margin-bottom:10px">${escapeHtml(text)}</div>${isUrl ? `<a href="${escapeHtml(text)}" target="_blank" rel="noopener" style="font-size:13px">↗ Open Link</a><br><br>` : ''}<button class="btn btn-primary" id="use-scan-result" style="width:auto;padding:8px 14px">Use as Text</button>`;
+  $('use-scan-result').addEventListener('click', () => {
+    state.type = 'text'; document.querySelectorAll('#type-pills button').forEach(b => b.classList.toggle('active', b.dataset.type === 'text'));
+    switchTab('generate'); renderForm('text'); $('f-text').value = text; renderQR(); showToast('Text loaded from scan');
+  });
+}
+$('scan-start').addEventListener('click', startScanner);
+$('scan-stop').addEventListener('click', stopScanner);
+
+$('bulk-generate').addEventListener('click', async () => {
+  const input = $('bulk-input').value.trim(); if (!input) { showToast('Enter CSV data'); return; }
+  const lines = input.split('\n').map(l => l.trim()).filter(Boolean); if (!lines.length) { showToast('No data'); return; }
+  const progress = $('bulk-progress'); const bar = $('bulk-progress-bar'); progress.classList.add('visible'); bar.style.width = '0%';
+  try {
+    const zip = new JSZip(); const baseOpts = buildOptions('');
+    for (let i = 0; i < lines.length; i++) {
+      const [data, filename] = lines[i].split(',').map(s => s.trim()); if (!data) continue;
+      const temp = new QRCodeStyling({ ...baseOpts, data }); const blob = await temp.getRawData('png');
+      zip.file((filename || `qr-${i + 1}`).replace(/[^a-zA-Z0-9_-]/g, '_') + '.png', blob);
+      bar.style.width = Math.round(((i + 1) / lines.length) * 100) + '%';
+    }
+    downloadBlob(await zip.generateAsync({ type: 'blob' }), 'qraft-bulk.zip'); showToast(`✅ Generated ${lines.length} QRs`); setTimeout(() => progress.classList.remove('visible'), 1000);
+  } catch (e) { showToast('Bulk generation failed'); progress.classList.remove('visible'); }
+});
+
+async function loadAnalytics() {
+  try { const res = await fetch(`https://api.counterapi.dev/v1/${COUNTER_WORKSPACE}/${COUNTER_KEY}`); if (res.ok) { const data = await res.json(); $('gen-count').textContent = (data.count || data.value || 0).toLocaleString(); } } catch (e) { $('gen-count').textContent = '—'; }
+  const container = $('analytics-links'); container.innerHTML = '<p style="color:var(--text-secondary);font-size:13px;padding:8px 0">Loading...</p>'; $('total-scans').textContent = '—';
+  try {
+    const res = await fetch('/api/stats'); if (!res.ok) throw new Error('Not configured');
+    const data = await res.json(); const links = data.links || [];
+    if (!links.length) { container.innerHTML = `<div style="padding:20px;text-align:center;color:var(--text-secondary);font-size:13px">No tracked links yet.<br><span style="font-size:12px">Use "Track this link" on the Generate tab.</span></div>`; $('total-scans').textContent = '0'; return; }
+    $('total-scans').textContent = links.reduce((s, l) => s + (l.scan_count || 0), 0).toLocaleString();
+    container.innerHTML = links.map(link => `<div class="analytics-link-item"><div class="info"><div class="code">/${escapeHtml(link.code)}</div><div class="url">${escapeHtml((link.target_url || '').slice(0, 50))}</div></div><div class="count"><div class="n">${link.scan_count || 0}</div><div class="u">scans</div></div></div>`).join('');
+  } catch (e) { container.innerHTML = `<div style="padding:16px;background:var(--bg);border-radius:8px;font-size:13px;line-height:1.6;color:var(--text-secondary)"><b style="color:var(--text)">Link tracking not configured.</b><br>To enable D1-based scan tracking, set up the backend functions and bind a D1 database. Generation count above still works.</div>`; }
+}
+$('refresh-analytics').addEventListener('click', loadAnalytics);
+
+function switchTab(tab) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active')); $('view-' + tab).classList.add('active');
+  document.querySelectorAll('.bottom-nav button').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  if (tab !== 'scan') stopScanner(); if (tab === 'history') renderHistory(); if (tab === 'analytics') loadAnalytics();
+}
+document.querySelectorAll('.bottom-nav button').forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
+
+function init() {
+  initTheme(); renderPresets(); renderSocialLogos(); renderForm('text'); renderHistory();
+  if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').then(r => console.log('SW registered:', r.scope)).catch(e => console.error('SW failed:', e)); }); }
+}
+init();
+</script>
+</body>
+</html>

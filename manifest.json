@@ -1,0 +1,21 @@
+{
+  "name": "Qraft — Professional QR Generator",
+  "short_name": "Qraft",
+  "description": "Generate 10 types of QR codes with HD PNG, SVG, PDF export, social logos, built-in scanner, and analytics.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#ffffff",
+  "theme_color": "#000000",
+  "lang": "en",
+  "categories": ["utilities", "productivity"],
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
